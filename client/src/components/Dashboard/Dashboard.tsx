@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from "../../hooks/redux"
 import { setPlayingTrack, setSearchResults } from "../../store/slices/SpotifySlice"
 import useSpotifyPlayer from "../../hooks/useSpotifyPlayer"
 import { spotifyApi } from "../../lib/spotifyWebApi"
+import type { Track } from "../../models/Spotify"
 
 interface DashboardProps {
   code: string
@@ -20,9 +21,8 @@ const Dashboard: React.FC<DashboardProps> = ({ code }) => {
   useSpotifyPlayer()
   const [search, setSearch] = useState("")
   const [lyrics, setLyrics] = useState("")
-  // console.log(searchResults)
 
-  const chooseTrack = (track: any) => {
+  const chooseTrack = (track: Track) => {
     dispatch(setPlayingTrack(track))
     setSearch("")
     setLyrics("")
@@ -88,7 +88,7 @@ const Dashboard: React.FC<DashboardProps> = ({ code }) => {
         onChange={(e) => setSearch(e.target.value)}
       />
       <div className="grow overflow-y-auto flex flex-col gap-y-5">
-        {searchResults.map((track: any) => (
+        {searchResults.map((track: Track) => (
           <TrackSearchResult track={track} chooseTrack={chooseTrack} key={track.uri} />
         ))}
         {searchResults.length === 0 && (

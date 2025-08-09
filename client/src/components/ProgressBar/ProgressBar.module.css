@@ -1,0 +1,7 @@
+.dot {
+    opacity: 0;
+}
+
+.progressBar:hover .dot {
+    opacity: 1;
+}

@@ -1,8 +1,9 @@
+import type { Track } from "../../models/Spotify"
 
 
 interface TrackSearchResultProps {
-    track: any,
-    chooseTrack: any
+    track: Track,
+    chooseTrack: (track: Track) => void
 }
 
 const TrackSearchResult: React.FC<TrackSearchResultProps> = ({ track, chooseTrack }) => {
