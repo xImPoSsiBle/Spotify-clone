@@ -1,11 +1,11 @@
-import { use, useCallback, useEffect, useState } from "react"
-import { useAppDispatch, useAppSelector } from "../../hooks/redux"
+import { useCallback, useEffect, useState } from "react"
+import { useAppSelector } from "../../hooks/redux"
 import { spotifyApi } from "../../lib/spotifyWebApi"
 import ProgressBar from "../ProgressBar/ProgressBar"
+import { FaPause, FaPlay } from "react-icons/fa6"
 
 
 const Player = () => {
-    const dispatch = useAppDispatch()
     const { accessToken } = useAppSelector(state => state.auth)
     const { device_id, playingTrack } = useAppSelector(state => state.spotify)
 
@@ -13,6 +13,7 @@ const Player = () => {
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(100);
+    const [isSeeking, setIsSeeking] = useState(false);
 
     const handlePlay = async () => {
         if (!device_id || !accessToken || !playingTrack) return
@@ -42,7 +43,7 @@ const Player = () => {
     }
 
     const getTrackState = useCallback(async () => {
-        if (!device_id || !accessToken || !playingTrack) return;
+        if (!device_id || !accessToken || !playingTrack || isSeeking) return;
 
         const trackState = await spotifyApi.getMyCurrentPlaybackState({ device_id });
 
@@ -53,7 +54,9 @@ const Player = () => {
 
         setDuration(duration);
         setProgress(progress);
-    }, [device_id, accessToken, playingTrack, dispatch]);
+    }, [device_id, accessToken, playingTrack, isSeeking]);
+
+
 
     const handleVolumeCommit = async () => {
         if (!device_id || !accessToken || !playingTrack) return
@@ -70,6 +73,25 @@ const Player = () => {
         const seconds = Math.floor((time % 60000) / 1000);
         return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     }
+
+    const handleSeekChange = (newProgressMs: number) => {
+        setIsSeeking(true);
+        setProgress(newProgressMs);
+    };
+
+    const handleSeekCommit = async (newProgressMs: number) => {
+        if (!device_id || !accessToken) return;
+        try {
+            setIsSeeking(true);
+            setProgress(newProgressMs);
+
+            await spotifyApi.seek(Math.floor(newProgressMs));
+        } catch (error) {
+            console.error("Ошибка при перемотке:", error);
+        } finally {
+            setTimeout(() => setIsSeeking(false), 1500);
+        }
+    };
 
     useEffect(() => {
         if (!isPlaying) return
@@ -88,49 +110,57 @@ const Player = () => {
     if (!accessToken || !playingTrack?.uri) return null
 
     return (
-        <div className="w-full h-[70px] bg-[#282828] text-white fixed bottom-0 flex items-center justify-center">
-            <div className="h-full w-[90%] flex items-center justify-between">
-                <div className="flex items-center">
+        <div className="w-full h-[90px] bg-[#181818] text-white fixed bottom-0 flex items-center justify-center mt-4">
+            <div className="h-full w-[92%] flex items-center justify-between">
+                <div className="flex items-center w-[30%]">
                     <img
-                        className="w-[50px] h-[50px] mr-5"
+                        className="w-[56px] h-[56px] rounded-md mr-4 shadow-lg"
                         src={playingTrack?.albumUrl}
                         alt="track image"
                     />
-                    <div className="max-w-[200px] truncate">
-                        <h1 className="text-lg font-semibold">
-                            {playingTrack?.title}
-                        </h1>
-                        <p className="text-sm text-gray-400">{playingTrack?.artist}</p>
+                    <div className="max-w-[180px] truncate">
+                        <h1 className="text-base font-semibold truncate">{playingTrack?.title}</h1>
+                        <p className="text-sm text-gray-400 truncate">{playingTrack?.artist}</p>
                     </div>
                 </div>
-                <div className="flex flex-col items-center">
-                    <span onClick={togglePlayPause}>
-                        {isPlaying ? 'Pause' : 'Play'}
-                    </span>
 
-                    <div className="flex items-center">
-                        {formatTime(progress)}
+                <div className="flex flex-col items-center w-[40%]">
+                    <div className="w-full flex justify-center">
+                        <button onClick={togglePlayPause} className="w-10 cursor-pointer">
+                            {isPlaying ? <FaPause /> : <FaPlay />}
+                        </button>
+                    </div>
+                    <div className="flex items-center space-x-2 w-full mt-1">
+                        <span className="text-xs text-gray-400 w-[40px] text-right">{formatTime(progress)}</span>
                         <ProgressBar
                             progress={progress}
                             duration={duration}
+                            onSeekChange={handleSeekChange}
+                            onSeekCommit={handleSeekCommit}
                         />
-                        {formatTime(duration)}
+                        <span className="text-xs text-gray-400 w-[40px]">{formatTime(duration)}</span>
                     </div>
                 </div>
-                <div>
+
+                <div className="flex items-center space-x-2 w-[20%] justify-end">
                     <input
                         type="range"
                         min={0}
                         max={100}
                         value={volume}
-                        onChange={e => setVolume(Number(e.target.value))}
+                        onChange={(e) => setVolume(Number(e.target.value))}
                         onMouseUp={handleVolumeCommit}
                         onTouchEnd={handleVolumeCommit}
+                        style={{
+                            background: `linear-gradient(90deg, #1DB954 ${volume}%, #4d4d4d ${volume}%)`,
+                        }}
+                        className="w-[100px] h-[3px] rounded-lg appearance-none cursor-pointer accent-green-500"
                     />
                 </div>
             </div>
         </div>
-    )
+    );
+
 }
 
 export default Player;
